@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^git commit -m \"Initial commit: Needleman-Wunsch Algorithm Visualization\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
