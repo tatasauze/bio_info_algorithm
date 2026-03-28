@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Needleman-Wunsch Algorithm Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --accent-color: #0984e3;
+            --best-color: #d63031; /* Red for optimal/best */
+            --grid-line: #b2bec3;
+            --cell-bg: #ffffff;
+            --cell-hover: #f1f2f6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f2f6;
+            color: var(--text-secondary);
+        }
+
+        button.active {
+            background-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 2px 10px rgba(9, 132, 227, 0.3);
+        }
+
+        button:hover:not(.active) {
+            background-color: #dfe6e9;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: row;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .visualization-area {
+            flex: 0 0 auto;
+            position: relative;
+            overflow: visible; 
+            background: white;
+            border: 1px solid #dfe6e9;
+            border-radius: 4px;
+        }
+
+        svg {
+            font-family: 'JetBrains Mono', monospace;
+            overflow: visible;
+            display: block;
+        }
+
+        .info-panel {
+            flex: 1;
+            min-width: 350px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid var(--accent-color);
+            height: 550px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+        }
+
+        .info-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: block;
+            color: var(--text-primary);
+            border-bottom: 1px solid #dfe6e9;
+            padding-bottom: 10px;
+        }
+
+        .calculation-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .option-block {
+            background: white;
+            border: 1px solid #dfe6e9;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .option-block.best {
+            background: #fff0f0; /* Light red bg for best */
+            border-color: var(--best-color);
+            box-shadow: 0 2px 5px rgba(214, 48, 49, 0.1);
+        }
+
+        .option-header {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .string-display {
+            background: #fff;
+            border: 1px solid #eee;
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin: 4px 0;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 0.8rem;
+        }
+        
+        .string-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        .string-label {
+            color: #b2bec3;
+            font-size: 0.7rem;
+            margin-right: 5px;
+        }
+        .string-seq1 { color: var(--accent-color); }
+        .string-seq2 { color: var(--best-color); }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Needleman-Wunsch Algorithm</h1>
+            <p class="subtitle">Interactive Visualization: Global Sequence Alignment ("mean" vs "name")</p>
+        </header>
+
+        <div class="controls">
+            <button id="btn-forward" class="active" onclick="setMode('forward')">Forward (Calculation)</button>
+            <button id="btn-backward" onclick="setMode('backward')">Backward (Traceback)</button>
+            <button onclick="resetView()">Reset</button>
+        </div>
+
+        <div class="main-content">
+            <div class="visualization-area" id="vis-container">
+                <!-- SVG will be injected here -->
+            </div>
+
+            <div class="info-panel">
+                <span class="info-title" id="info-title">Select a cell to see details</span>
+                <div class="calculation-detail" id="info-content">
+                    Hover over the grid cells to understand how the penalty score is derived and view the resulting string alignment.
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background: var(--accent-color)"></div> Sequence 1</div>
+            <div class="legend-item"><div class="dot" style="background: var(--best-color)"></div> Sequence 2 / Optimal Path</div>
+            <div class="legend-item"><div class="dot" style="background: #fdcb6e"></div> Gap Penalty (2)</div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration & Data ---
+        const seq1 = "mean"; // Top (Horizontal)
+        const seq2 = "name"; // Left (Vertical)
+        
+        // Scoring Rules
+        const SCORE_MATCH = 0;
+        const SCORE_GAP = 2;
+        const SCORE_CC_VV = 1; // Consonant-Consonant or Vowel-Vowel mismatch
+        const SCORE_CV = 3;    // Consonant-Vowel mismatch
+
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        // --- Helper Functions ---
+        function isVowel(char) {
+            return vowels.includes(char.toLowerCase());
+        }
+
+        function getMismatchScore(c1, c2) {
+            const v1 = isVowel(c1);
+            const v2 = isVowel(c2);
+            if (v1 === v2) return SCORE_CC_VV;
+            return SCORE_CV;
+        }
+
+        function getScore(c1, c2) {
+            if (c1 === c2) return SCORE_MATCH;
+            return getMismatchScore(c1, c2);
+        }
+
+        // --- Algorithm Logic ---
+        const rows = seq2.length + 1;
+        const cols = seq1.length + 1;
+        
+        // Matrix stores: { score: number, s1: string, s2: string }
+        let matrix = [];
+        let traceback = []; 
+
+        function calculateMatrix() {
+            matrix = Array(rows).fill().map(() => Array(cols).fill(null));
+            traceback = Array(rows).fill().map(() => Array(cols).fill(null));
+
+            // Initialization (0,0)
+            matrix[0][0] = { score: 0, s1: "", s2: "" };
+
+            // Initialization (First Row)
+            for (let j = 1; j < cols; j++) {
+                const prev = matrix[0][j-1];
+                matrix[0][j] = { 
+                    score: prev.score + SCORE_GAP, 
+                    s1: prev.s1 + seq1[j-1], 
+                    s2: prev.s2 + "-" 
+                };
+                traceback[0][j] = 'left';
+            }
+
+            // Initialization (First Col)
+            for (let i = 1; i < rows; i++) {
+                const prev = matrix[i-1][0];
+                matrix[i][0] = { 
+                    score: prev.score + SCORE_GAP, 
+                    s1: prev.s1 + "-", 
+                    s2: prev.s2 + seq2[i-1] 
+                };
+                traceback[i][0] = 'up';
+            }
+
+            // Filling
+            for (let i = 1; i < rows; i++) {
+                for (let j = 1; j < cols; j++) {
+                    const char1 = seq1[j-1];
+                    const char2 = seq2[i-1];
+                    
+                    const prevDiag = matrix[i-1][j-1];
+                    const prevUp = matrix[i-1][j];
+                    const prevLeft = matrix[i][j-1];
+
+                    const scoreDiag = prevDiag.score + getScore(char1, char2);
+                    const scoreUp = prevUp.score + SCORE_GAP;
+                    const scoreLeft = prevLeft.score + SCORE_GAP;
+
+                    const minScore = Math.min(scoreDiag, scoreUp, scoreLeft);
+                    
+                    let bestDir = '';
+                    let bestS1 = '';
+                    let bestS2 = '';
+
+                    // Priority: Diag > Up > Left
+                    if (minScore === scoreDiag) {
+                        bestDir = 'diag';
+                        bestS1 = prevDiag.s1 + char1;
+                        bestS2 = prevDiag.s2 + char2;
+                    } else if (minScore === scoreUp) {
+                        bestDir = 'up';
+                        bestS1 = prevUp.s1 + "-";
+                        bestS2 = prevUp.s2 + char2;
+                    } else {
+                        bestDir = 'left';
+                        bestS1 = prevLeft.s1 + char1;
+                        bestS2 = prevLeft.s2 + "-";
+                    }
+
+                    matrix[i][j] = { score: minScore, s1: bestS1, s2: bestS2 };
+                    traceback[i][j] = bestDir;
+                }
+            }
+        }
+
+        calculateMatrix();
+
+        // --- D3 Visualization ---
+        const width = 650;
+        const height = 500;
+        const cellSize = 80;
+        const offsetX = 80;
+        const offsetY = 60;
+
+        const svg = d3.select("#vis-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`);
+
+        // Arrow Marker
+        svg.append("defs").append("marker")
+            .attr("id", "arrowhead")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 8)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#636e72");
+            
+        // Red Arrow Marker for Best Path
+        svg.append("defs").append("marker")
+            .attr("id", "arrowhead-red")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 8)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("fill", "#d63031");
+
+        function drawGrid() {
+            // Top Labels
+            svg.selectAll(".top-label")
+                .data(["-"].concat(seq1.split("")))
+                .enter()
+                .append("text")
+                .attr("class", "label-text")
+                .style("font-size", "16px")
+                .style("font-weight", "700")
+                .style("fill", "#2d3436")
+                .attr("x", (d, i) => offsetX + i * cellSize + cellSize/2)
+                .attr("y", offsetY - 20)
+                .text(d => d);
+
+            // Left Labels
+            svg.selectAll(".left-label")
+                .data(["-"].concat(seq2.split("")))
+                .enter()
+                .append("text")
+                .attr("class", "label-text")
+                .style("font-size", "16px")
+                .style("font-weight", "700")
+                .style("fill", "#2d3436")
+                .attr("x", offsetX - 20)
+                .attr("y", (d, i) => offsetY + i * cellSize + cellSize/2 + 5)
+                .text(d => d);
+
+            // Cells
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const x = offsetX + j * cellSize;
+                    const y = offsetY + i * cellSize;
+
+                    // Cell Background
+                    svg.append("rect")
+                        .attr("class", "cell-rect")
+                        .attr("x", x)
+                        .attr("y", y)
+                        .attr("width", cellSize)
+                        .attr("height", cellSize)
+                        .attr("fill", "white")
+                        .attr("stroke", "#b2bec3")
+                        .attr("stroke-width", "1")
+                        .attr("data-i", i)
+                        .attr("data-j", j)
+                        .on("mouseover", handleMouseOver)
+                        .on("mouseout", handleMouseOut);
+
+                    // Cell Score Text
+                    svg.append("text")
+                        .attr("class", "cell-text")
+                        .style("font-size", "18px")
+                        .style("font-weight", "700")
+                        .style("fill", "#2d3436") 
+                        .style("text-anchor", "middle")
+                        .style("dominant-baseline", "middle")
+                        .attr("x", x + cellSize/2)
+                        .attr("y", y + cellSize/2)
+                        .attr("data-i", i)
+                        .attr("data-j", j)
+                        .text(matrix[i][j].score);
+                }
+            }
+        }
+
+        const arrowGroup = svg.append("g").attr("class", "arrow-group");
+        let currentMode = 'forward';
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-forward').className = mode === 'forward' ? 'active' : '';
+            document.getElementById('btn-backward').className = mode === 'backward' ? 'active' : '';
+            resetView();
+            
+            const title = document.getElementById('info-title');
+            const content = document.getElementById('info-content');
+            
+            if(mode === 'forward') {
+                title.innerText = "Forward Mode: Calculation Logic";
+                content.innerHTML = "Hover over a cell to see score calculation and the resulting string alignment for the best path.";
+            } else {
+                title.innerText = "Backward Mode: Traceback Path";
+                content.innerHTML = "Hover over the bottom-right cell to see the optimal alignment path reconstruction.";
+            }
+        }
+
+        function resetView() {
+            arrowGroup.selectAll("*").remove();
+            svg.selectAll(".cell-rect").attr("fill", "white").attr("stroke", "#b2bec3");
+            svg.selectAll(".cell-text").style("fill", "#2d3436");
+            document.getElementById('info-content').innerHTML = "Hover over the grid...";
+        }
+
+        function handleMouseOver(event) {
+            const i = parseInt(event.target.getAttribute("data-i"));
+            const j = parseInt(event.target.getAttribute("data-j"));
+            
+            arrowGroup.selectAll("*").remove();
+            // Reset highlights
+            svg.selectAll(".cell-rect").attr("fill", "white").attr("stroke", "#b2bec3");
+            svg.selectAll(".cell-text").style("fill", "#2d3436");
+
+            if (i === 0 && j === 0) {
+                updateInfo(0, 0, "Start", "Initialization: Score is 0.<br>Strings: \"\" vs \"\"");
+                return;
+            }
+
+            if (currentMode === 'forward') {
+                showForwardLogic(i, j);
+            } else {
+                showBackwardLogic(i, j);
+            }
+        }
+
+        function handleMouseOut() {
+            // Keep arrows for better UX
+        }
+
+        function showForwardLogic(i, j) {
+            const x = offsetX + j * cellSize + cellSize/2;
+            const y = offsetY + i * cellSize + cellSize/2;
+            const currentCell = matrix[i][j];
+            const bestDir = traceback[i][j];
+
+            // Highlight current cell
+            d3.select(event.target).attr("fill", "#f1f2f6").attr("stroke", "#0984e3");
+
+            let details = `<strong>Cell [${i},${j}]</strong> ('${seq2[i-1] || '-'}' vs '${seq1[j-1] || '-'}')<br>`;
+            details += `<div style="margin: 10px 0; padding: 10px; background: #fff; border: 1px solid #dfe6e9; border-radius: 4px;">`;
+            details += `<div style="font-size: 0.8rem; color: #636e72; margin-bottom: 4px;">Best Result:</div>`;
+            details += `<div class="string-display">`;
+            details += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${currentCell.s1}</span></div>`;
+            details += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${currentCell.s2}</span></div>`;
+            details += `</div>`;
+            details += `<div style="text-align: right; font-weight: 700; color: var(--best-color); margin-top: 4px;">Score: ${currentCell.score}</div>`;
+            details += `</div>`;
+            
+            details += `<strong>Calculation Options:</strong><br>`;
+
+            if (i === 0) {
+                drawArrow(x, y, x - cellSize, y, "left", true);
+                details += `<div class="option-block best">`;
+                details += `<div class="option-header"><span>Left (Gap)</span><span>${currentCell.score}</span></div>`;
+                details += `<div class="string-display">`;
+                details += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${currentCell.s1}</span></div>`;
+                details += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${currentCell.s2}</span></div>`;
+                details += `</div></div>`;
+            } else if (j === 0) {
+                drawArrow(x, y, x, y - cellSize, "up", true);
+                details += `<div class="option-block best">`;
+                details += `<div class="option-header"><span>Up (Gap)</span><span>${currentCell.score}</span></div>`;
+                details += `<div class="string-display">`;
+                details += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${currentCell.s1}</span></div>`;
+                details += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${currentCell.s2}</span></div>`;
+                details += `</div></div>`;
+            } else {
+                const char1 = seq1[j-1];
+                const char2 = seq2[i-1];
+                const matchScore = getScore(char1, char2);
+                
+                const prevDiag = matrix[i-1][j-1];
+                const prevUp = matrix[i-1][j];
+                const prevLeft = matrix[i][j-1];
+
+                const scoreDiag = prevDiag.score + matchScore;
+                const scoreUp = prevUp.score + SCORE_GAP;
+                const scoreLeft = prevLeft.score + SCORE_GAP;
+
+                // Option 1: Diagonal
+                const isBestDiag = (bestDir === 'diag');
+                const s1Diag = prevDiag.s1 + char1;
+                const s2Diag = prevDiag.s2 + char2;
+                details += `<div class="option-block ${isBestDiag ? 'best' : ''}">`;
+                details += `<div class="option-header"><span>Diagonal (${prevDiag.score} + ${matchScore})</span><span>${scoreDiag}</span></div>`;
+                details += `<div class="string-display">`;
+                details += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${s1Diag}</span></div>`;
+                details += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${s2Diag}</span></div>`;
+                details += `</div></div>`;
+                drawArrow(x, y, x - cellSize, y - cellSize, "diag", isBestDiag);
+
+                // Option 2: Up
+                const isBestUp = (bestDir === 'up');
+                const s1Up = prevUp.s1 + "-";
+                const s2Up = prevUp.s2 + char2;
+                details += `<div class="option-block ${isBestUp ? 'best' : ''}">`;
+                details += `<div class="option-header"><span>Up (${prevUp.score} + ${SCORE_GAP})</span><span>${scoreUp}</span></div>`;
+                details += `<div class="string-display">`;
+                details += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${s1Up}</span></div>`;
+                details += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${s2Up}</span></div>`;
+                details += `</div></div>`;
+                drawArrow(x, y, x, y - cellSize, "up", isBestUp);
+
+                // Option 3: Left
+                const isBestLeft = (bestDir === 'left');
+                const s1Left = prevLeft.s1 + char1;
+                const s2Left = prevLeft.s2 + "-";
+                details += `<div class="option-block ${isBestLeft ? 'best' : ''}">`;
+                details += `<div class="option-header"><span>Left (${prevLeft.score} + ${SCORE_GAP})</span><span>${scoreLeft}</span></div>`;
+                details += `<div class="string-display">`;
+                details += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${s1Left}</span></div>`;
+                details += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${s2Left}</span></div>`;
+                details += `</div></div>`;
+                drawArrow(x, y, x - cellSize, y, "left", isBestLeft);
+            }
+
+            updateInfo(i, j, "Calculation Details", details);
+        }
+
+        function showBackwardLogic(i, j) {
+            let currI = i;
+            let currJ = j;
+            let pathHtml = `<strong>Traceback from [${i},${j}]:</strong><br>`;
+            
+            // Highlight start cell
+            svg.selectAll(`.cell-rect[data-i="${i}"][data-j="${j}"]`).attr("fill", "#fff0f0").attr("stroke", "#d63031");
+            svg.selectAll(`.cell-text[data-i="${i}"][data-j="${j}"]`).style("fill", "#d63031");
+
+            let steps = 0;
+            const maxSteps = 100;
+
+            while ((currI > 0 || currJ > 0) && steps < maxSteps) {
+                steps++;
+                const x = offsetX + currJ * cellSize + cellSize/2;
+                const y = offsetY + currI * cellSize + cellSize/2;
+                const direction = traceback[currI][currJ];
+
+                if (!direction) {
+                    pathHtml += `<br><span style="color:red">Error: No traceback direction found at [${currI},${currJ}].</span>`;
+                    break;
+                }
+
+                let nextI = currI;
+                let nextJ = currJ;
+                let action = "";
+                let arrowType = "";
+
+                if (direction === 'diag') {
+                    nextI--; nextJ--;
+                    action = `Match/Mismatch [${seq2[currI-1]} vs ${seq1[currJ-1]}]`;
+                    arrowType = "diag";
+                } else if (direction === 'up') {
+                    nextI--;
+                    action = `Deletion (Gap in seq1)`;
+                    arrowType = "up";
+                } else if (direction === 'left') {
+                    nextJ--;
+                    action = `Insertion (Gap in seq2)`;
+                    arrowType = "left";
+                }
+
+                // Draw Red Arrow for Traceback
+                drawArrow(x, y, offsetX + nextJ * cellSize + cellSize/2, offsetY + nextI * cellSize + cellSize/2, arrowType, true, true);
+                
+                // Highlight Next Cell
+                svg.selectAll(`.cell-rect[data-i="${nextI}"][data-j="${nextJ}"]`).attr("fill", "#fff0f0").attr("stroke", "#d63031");
+                svg.selectAll(`.cell-text[data-i="${nextI}"][data-j="${nextJ}"]`).style("fill", "#d63031");
+                
+                pathHtml += `⬇ ${action}<br>`;
+                
+                currI = nextI;
+                currJ = nextJ;
+            }
+
+            if (steps >= maxSteps) {
+                pathHtml += `<br><span style="color:red">Warning: Max steps reached.</span>`;
+            } else {
+                pathHtml += `<br><strong>Alignment Complete.</strong>`;
+                const final = matrix[i][j];
+                pathHtml += `<div class="string-display" style="margin-top:10px">`;
+                pathHtml += `<div class="string-row"><span class="string-label">Seq1:</span><span class="string-seq1">${final.s1}</span></div>`;
+                pathHtml += `<div class="string-row"><span class="string-label">Seq2:</span><span class="string-seq2">${final.s2}</span></div>`;
+                pathHtml += `</div>`;
+            }
+
+            updateInfo(i, j, "Traceback Path", pathHtml);
+        }
+
+        function drawArrow(x1, y1, x2, y2, type, isBest, isTraceback = false) {
+            // Adjust coordinates slightly to stop at cell border
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const stopDist = cellSize / 2 + 5; 
+            const endX = x1 - Math.cos(angle) * stopDist;
+            const endY = y1 - Math.sin(angle) * stopDist;
+
+            arrowGroup.append("line")
+                .attr("x1", x1)
+                .attr("y1", y1)
+                .attr("x2", endX)
+                .attr("y2", endY)
+                .attr("stroke", isBest || isTraceback ? "#d63031" : "#b2bec3")
+                .attr("stroke-width", isBest || isTraceback ? "2.5" : "1.5")
+                .attr("marker-end", isBest || isTraceback ? "url(#arrowhead-red)" : "url(#arrowhead)");
+        }
+
+        function updateInfo(i, j, title, html) {
+            document.getElementById('info-title').innerText = title;
+            document.getElementById('info-content').innerHTML = html;
+        }
+
+        // Initialize
+        drawGrid();
+        setMode('forward');
+
+    </script>
+</body>
+</html>
+
