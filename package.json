@@ -1,0 +1,13 @@
+{
+  "name": "bio-info-algorithm",
+  "version": "1.0.0",
+  "description": "Needleman-Wunsch Algorithm Visualization for Bioinformatics",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve . --listen 3000"
+  },
+  "keywords": ["bioinformatics", "algorithm", "needleman-wunsch", "sequence-alignment", "visualization"],
+  "author": "",
+  "license": "MIT"
+}
